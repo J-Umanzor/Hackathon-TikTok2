@@ -39,12 +39,11 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
-	ReadBufferSize:  1024, // Increase if necessary
-	WriteBufferSize: 1024, // Increase if necessary
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
 func main() {
-
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	ctx = context.Background()
 
@@ -56,7 +55,7 @@ func main() {
 
 	// Initialize database connection
 	var err error
-	db, err = sql.Open("mysql", "root:password@tcp(127.0.0.1:3306)/golang_webapp") // Update UserName and Password
+	db, err = sql.Open("mysql", "root:qwerty@tcp(127.0.0.1:3306)/tiktok_db") // Update UserName and Password
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,6 +70,7 @@ func main() {
 	http.HandleFunc("/notifications", notificationHandler)
 	http.HandleFunc("/submitRecommend", submitRecommendedHandler)
 	http.HandleFunc("/recommend", getRecommendedHandler)
+	http.HandleFunc("/deleteFavorite", deleteFavoriteHandler) // New handler for deleting from favorites
 
 	fmt.Println("Starting server on :8080...")
 	http.ListenAndServe(":8080", nil)
@@ -270,7 +270,6 @@ func submitRecommendedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Print out all form values for debugging
 	// Decode the JSON request body
 	var data requestData
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -291,7 +290,7 @@ func submitRecommendedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert the new message into the database
+	// Insert the new favorite into the database
 	mu.Lock()
 	_, err = db.Exec("INSERT INTO favorites (message_id) VALUES (?)", id)
 	mu.Unlock()
@@ -301,6 +300,41 @@ func submitRecommendedHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("Successfully added message ID:", id, "to favorites")
+	w.WriteHeader(http.StatusOK)
+}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+func deleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "ID parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// Delete the favorite from the database
+	mu.Lock()
+	result, err := db.Exec("DELETE FROM favorites WHERE message_id = ?", id)
+	mu.Unlock()
+
+	if err != nil {
+		http.Error(w, "Error removing favorite", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, "Error checking deletion result", http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, "No favorite found with the given ID", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

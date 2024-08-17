@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Hackathon</title>
     <link rel="stylesheet" href="/static/css/index.css">
+    <script src="/static/js/script.js"></script>
+    <title>Message Board</title>
 </head>
+
 <body>
     <header>
         <h1>TikTok Hackathon Project</h1>
@@ -14,29 +17,36 @@
     <main>
         <section class="content-submission">
             <h2>Submit Your Content</h2>
-            <form action="/submit" method="POST">
-                <textarea name="content" rows="4" cols="50" placeholder="Enter your content here..."></textarea>
+            <form id="contentForm" action="/submit" method="POST">
+                <textarea name="content" id="contentInput" rows="4" cols="50" placeholder="Enter your content here..."></textarea>
                 <br>
-                <button type="submit">Submit</button>
+                <button id="submit-button" type="submit">Submit</button>
             </form>
         </section>
 
         <section class="content-display">
-            <h2>Submitted Content</h2>
+            <h2>All Messages:</h2>
             <ul id="contentList">
                 {{range .}}
-                <li id="msg_{{.ID}}">
-                    {{.Content}} 
-                    <button class="favorite" onclick="favoriteContent('{{.ID}}')">Favorite</button>
-                    <span style="display: none;">
-                        (Created at: {{.CreatedAt}})
-                    </span>
+                <li id="message-{{.ID}}">
+                    {{.Content}}
+                    <button class="favorite" onclick="favoriteContent('{{.ID}}', '{{.Content}}')">Favorite</button>
+                    <button class="delete" onclick="deleteMessage(event, '{{.ID}}')">Delete</button>
                 </li>
                 {{end}}
             </ul>
         </section>
+
+        <section class="favorite-display">
+            <h2>Favorite Messages</h2>
+            <ul id="favoriteList">
+                <!-- Favorite messages will be dynamically added here -->
+            </ul>
+        </section>
     </main>
 
-    <script src="/static/js/index.js"></script>
+    <!-- Modal for showing notifications -->
+    <div id="notification-modal"></div>
 </body>
+
 </html>
